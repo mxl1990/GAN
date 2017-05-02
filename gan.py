@@ -2,6 +2,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
+from tensorflow.python.ops import variable_scope
 LENGTH = 1000  # 每一个样本由1000个
 # %matplotlib inline
 
@@ -42,52 +43,62 @@ def preprocess_data(x):
 
 # 记录均值和均方差
 x = tf.placeholder(tf.float32, shape=[None, 2], name="feature")  # [mean，std] -》 D
+# 样本的标签数据
 y = tf.placeholder(tf.float32, shape=[None, 1], name="label")
 in_size = LENGTH
 out_size = LENGTH
 
 ###################################### G  网络结构
 # 第一层
-z = tf.placeholder(tf.float32, shape=[None, LENGTH], name="noise")  # 随机值噪音
-Weights = tf.Variable(tf.random_normal([in_size, 32]))
-biases = tf.Variable(tf.zeros([1, 32]) + 0.1)
-G_output = tf.matmul(z, Weights) + biases
-# G_output = z * w + b
-G_output = tf.nn.relu(G_output)
-# 第二层
-Weights2 = tf.Variable(tf.random_normal([32, 32]))
-biases2 = tf.Variable(tf.zeros([1, 32]) + 0.1)
-G_output2 = tf.matmul(G_output, Weights2) + biases2
-G_output2 = tf.nn.sigmoid(G_output2)
-# 第三层
-Weights3 = tf.Variable(tf.random_normal([32, out_size]))
-biases3 = tf.Variable(tf.zeros([1, out_size]) + 0.1)
-G_output3 = tf.matmul(G_output2, Weights3) + biases3
+# 每个噪声数据维度为LENGTH
+reuse = len([t for t in tf.global_variables() if t.name.startswith('Generator')]) > 0
+with variable_scope.variable_scope('Generator', reuse = reuse):
+    z = tf.placeholder(tf.float32, shape=[None, LENGTH])  # 随机值噪音
+    # 随机权重
+    Weights = tf.Variable(tf.random_normal([in_size, 32]))
+    # 偏差为0.1
+    biases = tf.Variable(tf.zeros([1, 32]) + 0.1)
+    # G_output = z * w + b
+    G_output = tf.matmul(z, Weights) + biases
+    # Rectified Linear Units激活函数
+    # relu(x) = max(0,x)即比0大就取本身
+    G_output = tf.nn.relu(G_output)
+    # 第二层
+    Weights2 = tf.Variable(tf.random_normal([32, 32]))
+    biases2 = tf.Variable(tf.zeros([1, 32]) + 0.1)
+    G_output2 = tf.matmul(G_output, Weights2) + biases2
+    # 第二层激活函数为sigmoid
+    G_output2 = tf.nn.sigmoid(G_output2)
+    # 第三层
+    Weights3 = tf.Variable(tf.random_normal([32, out_size]))
+    biases3 = tf.Variable(tf.zeros([1, out_size]) + 0.1)
+    G_output3 = tf.matmul(G_output2, Weights3) + biases3
 
-G_PARAMS = [Weights, biases, Weights2, biases2, Weights3, biases3]  # G的参数
+# G_PARAMS = [Weights, biases, Weights2, biases2, Weights3, biases3]  # G的参数
 
 ###################################### D 网络结构(预训练的D)
 # 第一层
+reuse = len([t for t in tf.global_variables() if t.name.startswith('Discrim')]) > 0
+with variable_scope.variable_scope('Discrim', reuse = reuse):
+    dWeights = tf.Variable(tf.random_normal([2, 32]))
+    dbiases = tf.Variable(tf.zeros([1, 32]) + 0.1)
+    D_output = tf.matmul(x, dWeights) + dbiases
+    D_output = tf.nn.relu(D_output)
+    # 第二层
+    dWeights2 = tf.Variable(tf.random_normal([32, 32]))
+    dbiases2 = tf.Variable(tf.zeros([1, 32]) + 0.1)
+    D_output2 = tf.matmul(D_output, dWeights2) + dbiases2
+    D_output2 = tf.nn.sigmoid(D_output2)
 
-dWeights = tf.Variable(tf.random_normal([2, 32]), name="D_W")
-dbiases = tf.Variable(tf.zeros([1, 32]) + 0.1, name="D_b")
-D_output = tf.matmul(x, dWeights) + dbiases
-D_output = tf.nn.relu(D_output)
-# 第二层
-dWeights2 = tf.Variable(tf.random_normal([32, 32]), name="D_W2")
-dbiases2 = tf.Variable(tf.zeros([1, 32]) + 0.1, name="D_b2")
-D_output2 = tf.matmul(D_output, dWeights2) + dbiases2
-D_output2 = tf.nn.sigmoid(D_output2)
+    # 第三层
+    dWeights3 = tf.Variable(tf.random_normal([32, 1]))
+    dbiases3 = tf.Variable(tf.zeros([1, 1]) + 0.1)
+    D_output3_ = tf.matmul(D_output2, dWeights3) + dbiases3
+    D_output3 = tf.nn.sigmoid(D_output3_)
 
-# 第三层
-dWeights3 = tf.Variable(tf.random_normal([32, 1]), name="D_W3")
-dbiases3 = tf.Variable(tf.zeros([1, 1]) + 0.1, name="D_b3")
-D_output3_ = tf.matmul(D_output2, dWeights3) + dbiases3
-D_output3 = tf.nn.sigmoid(D_output3_)
-
-D_PARAMS = [dWeights, dbiases,
-            dWeights2, dbiases2,
-            dWeights3, dbiases3]
+# D_PARAMS = [dWeights, dbiases,
+#                 dWeights2, dbiases2,
+#                 dWeights3, dbiases3]
 
 ##################################### GAN的结构
 
@@ -127,16 +138,18 @@ d_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=D_output3
 g_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=GAN_output3_, labels=y))  # GAN二分类交叉熵
 
 #################################### 定义优化器
-d_optimizer = tf.train.GradientDescentOptimizer(0.01).minimize(
-    d_loss,
-    global_step=tf.Variable(0),
-    var_list=D_PARAMS
-)
-
+# G的优化器
 g_optimizer = tf.train.GradientDescentOptimizer(0.05).minimize(
     g_loss,
     global_step=tf.Variable(0),
-    var_list=G_PARAMS
+    var_list=[t for t in tf.global_variables() if t.name.startswith('Generator')]
+)
+
+# D的优化器
+d_optimizer = tf.train.GradientDescentOptimizer(0.01).minimize(
+    d_loss,
+    global_step=tf.Variable(0),
+    var_list=[t for t in tf.trainable_variables() if t.name.startswith('Discrim')]
 )
 
 d_loss_history = []
