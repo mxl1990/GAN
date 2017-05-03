@@ -78,6 +78,7 @@ with variable_scope.variable_scope('Generator', reuse = reuse):
 
 ###################################### D 网络结构(预训练的D)
 # 第一层
+# 这里的输入是x
 reuse = len([t for t in tf.global_variables() if t.name.startswith('Discrim')]) > 0
 with variable_scope.variable_scope('Discrim', reuse = reuse):
     dWeights = tf.Variable(tf.random_normal([2, 32]))
@@ -105,31 +106,35 @@ with variable_scope.variable_scope('Discrim', reuse = reuse):
 # 先求出G_output3的各行平均值和方差
 # 对输出的每行求平均值
 MEAN = tf.reduce_mean(G_output3, 1)  # 行向量
+# expand_dims增加维度
+# tanspose转置tensor
 MEAN_T = tf.transpose(tf.expand_dims(MEAN, 0))  # 转置
 STD = tf.sqrt(tf.reduce_mean(tf.square(G_output3 - MEAN_T), 1))
 DATA = tf.concat([MEAN_T,
                      tf.transpose(tf.expand_dims(STD, 0))], 1 )
 
 # GAN中的D
-GAN_Weights = tf.Variable(tf.random_normal([2, 32]), name="GAN_W")
-GAN_biases = tf.Variable(tf.zeros([1, 32]) + 0.1, name="GAN_b")
-GAN_output = tf.matmul(DATA, GAN_Weights) + GAN_biases
-GAN_output = tf.nn.relu(GAN_output)
-# 第二层
-GAN_Weights2 = tf.Variable(tf.random_normal([32, 32]), name="GAN_W2")
-GAN_biases2 = tf.Variable(tf.zeros([1, 32]) + 0.1, name="GAN_b2")
-GAN_output2 = tf.matmul(GAN_output, GAN_Weights2) + GAN_biases2
-GAN_output2 = tf.nn.sigmoid(GAN_output2)
+reuse = len([t for t in tf.global_variables() if t.name.startswith('GAN')]) > 0
+with variable_scope.variable_scope('GAN', reuse = reuse): 
+    GAN_Weights = tf.Variable(tf.random_normal([2, 32]))
+    GAN_biases = tf.Variable(tf.zeros([1, 32]) + 0.1)
+    GAN_output = tf.matmul(DATA, GAN_Weights) + GAN_biases
+    GAN_output = tf.nn.relu(GAN_output)
+    # 第二层
+    GAN_Weights2 = tf.Variable(tf.random_normal([32, 32]))
+    GAN_biases2 = tf.Variable(tf.zeros([1, 32]) + 0.1)
+    GAN_output2 = tf.matmul(GAN_output, GAN_Weights2) + GAN_biases2
+    GAN_output2 = tf.nn.sigmoid(GAN_output2)
 
-# 第三层
-GAN_Weights3 = tf.Variable(tf.random_normal([32, 1]), name="GAN_W3")
-GAN_biases3 = tf.Variable(tf.zeros([1, 1]) + 0.1, name="GAN_b3")
-GAN_output3_ = tf.matmul(GAN_output2, GAN_Weights3) + GAN_biases3
-GAN_output3 = tf.nn.sigmoid(GAN_output3_)
+    # 第三层
+    GAN_Weights3 = tf.Variable(tf.random_normal([32, 1]))
+    GAN_biases3 = tf.Variable(tf.zeros([1, 1]) + 0.1)
+    GAN_output3_ = tf.matmul(GAN_output2, GAN_Weights3) + GAN_biases3
+    GAN_output3 = tf.nn.sigmoid(GAN_output3_)
 
-GAN_D_PARAMS = [GAN_Weights, GAN_biases,
-                GAN_Weights2, GAN_biases2,
-                GAN_Weights3, GAN_biases3]
+    # GAN_D_PARAMS = [GAN_Weights, GAN_biases,
+    #                 GAN_Weights2, GAN_biases2,
+    #                 GAN_Weights3, GAN_biases3]
 
 ##################################### 定义损失函数
 # D的损失函数
@@ -165,36 +170,44 @@ with tf.Session() as sess:
             # 使用G生成一批样本:
             real = sample_data(100,length=LENGTH)
             noise = random_data(100,length=LENGTH)
+            # 生成模拟样本
             generate = sess.run(G_output3, feed_dict={
                 z: noise
-            })  # 生成样本
+            })  
             X = list(real) + list(generate)  
             X = preprocess_data(X)
-            Y = [[1] for _ in range(len(real))] + [[0] for _ in range(len(generate))]
+            Y = tf.concat([tf.ones(len(real)), tf.zeros(len(generate))])
+            # Y = [[1] for _ in range(len(real))] + [[0] for _ in range(len(generate))]
+            # 训练判别网络
             d_loss_value, _ = sess.run([d_loss, d_optimizer], feed_dict={
                 x: X,
                 y: Y
-            })  # 训练判别网络
+            })  
+            # 记录数据，用于绘图
             d_loss_history.append(d_loss_value)
         # 将参数移动过去GAN中的判别网络
-        dp_value = sess.run(D_PARAMS)
-        for i, v in enumerate(GAN_D_PARAMS):
+        # dp_value = sess.run(D_PARAMS)
+        dp_value = sess.run([t for t in tf.global_variables() if t.name.startswith('Discrim')])
+        for i, v in enumerate([t for t in tf.global_variables() if t.name.startswith('GAN')]):
             sess.run(v.assign(dp_value[i]))
 
         for _ in range(100):
             noise = random_data(100,length=LENGTH)
+            # 调整G，让GAN的误差减少
             g_loss_value, _ = sess.run([g_loss, g_optimizer], feed_dict={
                 z: noise,
-                y: [[1] for _ in range(len(noise))]  # 混肴为目标,不需要加入x，我们只是借助G，并不需要训练G
-            })  # 调整G，让GAN的误差减少
+                # y: [[1] for _ in range(len(noise))]  # 混肴为目标,不需要加入x，我们只是借助G，并不需要训练G
+                y:tf.ones(len(noise))
+            })  
             g_loss_history.append(g_loss_value)
+
         if step % 20 == 0 or step+1 == epoch:
             noise = random_data(1,length=LENGTH)
             generate = sess.run(G_output3, feed_dict={
                 z: noise
             })
             print("[%4d] GAN-d-loss: %.12f  GAN-g-loss: %.12f   generate-mean: %.4f   generate-std: %.4f" % (step,
-                            d_loss_value, g_loss_value,generate.mean() ,generate.std() ))
+                            d_loss_value, g_loss_value, generate.mean(), generate.std() ))
             
             
     print("train finish...")
