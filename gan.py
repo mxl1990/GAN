@@ -176,8 +176,9 @@ with tf.Session() as sess:
             })  
             X = list(real) + list(generate)  
             X = preprocess_data(X)
-            Y = tf.concat([tf.ones(len(real)), tf.zeros(len(generate))])
-            # Y = [[1] for _ in range(len(real))] + [[0] for _ in range(len(generate))]
+            # Y = tf.concat([tf.ones(len(real)), tf.zeros(len(generate))], 0)
+            # Y = Y.eval()# sess.run(Y)
+            Y = [[1] for _ in range(len(real))] + [[0] for _ in range(len(generate))]
             # 训练判别网络
             d_loss_value, _ = sess.run([d_loss, d_optimizer], feed_dict={
                 x: X,
@@ -196,8 +197,8 @@ with tf.Session() as sess:
             # 调整G，让GAN的误差减少
             g_loss_value, _ = sess.run([g_loss, g_optimizer], feed_dict={
                 z: noise,
-                # y: [[1] for _ in range(len(noise))]  # 混肴为目标,不需要加入x，我们只是借助G，并不需要训练G
-                y:tf.ones(len(noise))
+                y: [[1] for _ in range(len(noise))]  # 混肴为目标,不需要加入x，我们只是借助G，并不需要训练G
+                # y:tf.ones(len(noise))
             })  
             g_loss_history.append(g_loss_value)
 
