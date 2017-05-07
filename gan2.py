@@ -50,6 +50,15 @@ def random_data(size, length=100):
         data.append(x)
     return np.array(data)
 
+def gen_noises(batch_num=100, batch_size=1000, data_dim=100):
+    # print("begin to generate sample data")
+    noises = []
+    for i in range(batch_num):
+        sample = random_data(batch_size, data_dim)
+        noises.append(sample)
+    # print("generating process finish")
+    return noises
+
 
 
 
@@ -84,6 +93,7 @@ g_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=output_fa
 
 #################################### 定义优化器
 # D的优化器
+# d_optimizer = tf.train.AdamOptimizer(0.0001).minimize(
 d_optimizer = tf.train.GradientDescentOptimizer(0.01).minimize(
     d_loss,
     # global_step=tf.Variable(0),
@@ -91,7 +101,8 @@ d_optimizer = tf.train.GradientDescentOptimizer(0.01).minimize(
 )
 
 # G的优化器
-g_optimizer = tf.train.GradientDescentOptimizer(0.05).minimize(
+# g_optimizer = tf.train.AdamOptimizer(0.0002).minimize(
+g_optimizer = tf.train.GradientDescentOptimizer(0.02).minimize(
     g_loss,
     # global_step=tf.Variable(0),
     var_list=[t for t in tf.global_variables() if t.name.startswith('Generator')]
@@ -106,44 +117,38 @@ with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
     # GAN博弈开始
     print('train GAN....')
-    test = sample_datas[0]
-    print("train data mean is", test.mean(), "its std is", test.std())
-    # (d, b) = np.histogram(sample_datas[0])
-    # plt.plot(b[:-1], d, c="y")
+    # test = sample_datas[0]
+    # print("train data mean is", test.mean(), "its std is", test.std())
     for step in range(epoch):
-        # batchsize为1000,数据集大小为100 * 1000
-        for indx in range(100):
-            # 使用G生成一批样本:
-            real = sample_datas[indx]
-            noise = random_data(1000,length=dim)
+        # 使用G生成一批样本:
+        noises = gen_noises(100, 1000,data_dim=dim)
+
+        for batch in range(100):
+            real = sample_datas[batch]
+            noise = noises[batch]            
 
             # 训练D
             d_loss_value, _ = sess.run([d_loss, d_optimizer], feed_dict={
                 input_real:real,
                 input_fake:noise,
-                y_real:np.ones((len(real),1)),
-                y_fake:np.zeros((len(noise),1))
+                y_real:np.ones((len(real), 1)),
+                y_fake:np.zeros((len(noise), 1)),
+
             })  
             # 记录数据，用于绘图
             d_loss_history.append(d_loss_value)
 
-        for _ in range(100):
-            noise = random_data(100,length=dim)
-            # 调整G，让GAN的误差减少
             g_loss_value, _ = sess.run([g_loss, g_optimizer], feed_dict={
                 input_fake: noise,
                 y_fake: np.ones((len(noise),1)) 
             })  
             g_loss_history.append(g_loss_value)
 
-        for _ in range(100):
-            noise = random_data(100,length=dim)
-            # 调整G，让GAN的误差减少
-            g_loss_value, _ = sess.run([g_loss, g_optimizer], feed_dict={
-                input_fake: noise,
-                y_fake: np.ones((len(noise),1)) 
-            })  
-            g_loss_history.append(g_loss_value)
+        # for _ in range(100):
+        #     noise = random_data(100,length=dim)
+        #     # 调整G，让GAN的误差减少
+            
+
 
         noise = random_data(1,length=dim)
         generate = sess.run(fake_data, feed_dict={
