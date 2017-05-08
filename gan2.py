@@ -89,7 +89,7 @@ d_loss_real = tf.reduce_mean(
     tf.nn.sigmoid_cross_entropy_with_logits(logits=output_real_, labels=tf.ones_like(output_real)))
 d_loss_fake = tf.reduce_mean(
     tf.nn.sigmoid_cross_entropy_with_logits(logits=output_fake_, labels=tf.zeros_like(output_fake)))
-d_loss = d_loss_real + d_loss_fake
+d_loss = (d_loss_real + d_loss_fake ) / 2
 # G的损失函数
 g_loss = tf.reduce_mean(
     tf.nn.sigmoid_cross_entropy_with_logits(logits=output_fake_, labels=tf.ones_like(output_fake)))  
@@ -124,6 +124,8 @@ with tf.Session() as sess:
     for step in range(epoch):
         # 使用G生成一批样本:
         # noises = gen_noises(100, 1000,data_dim=dim)
+        d_loss_sum = 0.0
+        g_loss_sum = 0.0
 
         for batch in range(100):
             real = sample_datas[batch]
@@ -137,12 +139,22 @@ with tf.Session() as sess:
             })  
             # 记录数据，用于绘图
             d_loss_history.append(d_loss_value)
+            d_loss_sum = d_loss_sum + d_loss_value
 
             # 训练G
             g_loss_value, _ = sess.run([g_loss, g_optimizer], feed_dict={
                 input_fake: noise,
                 })  
             g_loss_history.append(g_loss_value)
+            g_loss_sum = g_loss_sum + g_loss_value
+
+
+        noise = random_data(1,length=dim)
+        generate = sess.run(fake_data, feed_dict={
+            input_fake: noise,
+        })
+        print("[%4d] GAN-d-loss: %.12f  GAN-g-loss: %.12f   generate-mean: %.4f   generate-std: %.4f" % (step,
+                    d_loss_sum / 100, g_loss_sum / 100, generate.mean(), generate.std() ))
             # while True:
             #     g_loss_value, _ = sess.run([g_loss, g_optimizer], feed_dict={
             #         input_fake: noise,
@@ -164,19 +176,17 @@ with tf.Session() as sess:
             # })  
             # # 记录数据，用于绘图
             # d_loss_history.append(d_loss_value)
-
-
-        noise = random_data(1,length=dim)
-        generate = sess.run(fake_data, feed_dict={
-            input_fake: noise,
-        })
-        print("[%4d] GAN-d-loss: %.12f  GAN-g-loss: %.12f   generate-mean: %.4f   generate-std: %.4f" % (step,
-                        d_loss_value, g_loss_value, generate.mean(), generate.std() ))
-        (data, bins) = np.histogram(generate[0])
-        (test, bins2) = np.histogram(noise[0])
-        plt.plot(bins[:-1], data, c="r")
-        plt.plot(bins2[:-1], test, c='b')
-        savefig('epoch' + str(step)+".jpg")
+    noise = random_data(1,length=dim)
+    generate = sess.run(fake_data, feed_dict={
+        input_fake: noise,
+    })
+    print("[%4d] GAN-d-loss: %.12f  GAN-g-loss: %.12f   generate-mean: %.4f   generate-std: %.4f" % (step,
+                    d_loss_value, g_loss_value, generate.mean(), generate.std() ))
+    (data, bins) = np.histogram(generate[0])
+    (test, bins2) = np.histogram(noise[0])
+    plt.plot(bins[:-1], data, c="r")
+    plt.plot(bins2[:-1], test, c='b')
+    savefig("final.jpg") 
 
             
             
