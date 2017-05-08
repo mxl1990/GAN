@@ -11,11 +11,13 @@ def Discrim(input_data):
         dbiases = tf.Variable(tf.zeros([1, 32]))
         D_output = tf.matmul(input_data, dWeights) + dbiases
         D_output = tf.nn.relu(D_output)
+        D_output = tf.nn.dropout(D_output, 0.7)
         # 第二层
         dWeights2 = tf.Variable(tf.random_normal([32, 32]))
         dbiases2 = tf.Variable(tf.zeros([1, 32]))
         D_output2 = tf.matmul(D_output, dWeights2) + dbiases2
         D_output2 = tf.nn.sigmoid(D_output2)
+        D_output2 = tf.nn.dropout(D_output2, 0.7)
 
         # 第三层
         dWeights3 = tf.Variable(tf.random_normal([32, 1]))
