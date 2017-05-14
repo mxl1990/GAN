@@ -115,10 +115,22 @@ g_optimizer = tf.train.GradientDescentOptimizer(0.002).minimize(
 
 d_loss_history = []
 g_loss_history = []
-epoch = 10000000
+
+sum_var = tf.summary.merge_all()
+
+epoch = 10
 g_loss_old = 100
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
+    # 可视化整个过程
+    writer = tf.summary.FileWriter(".//test", sess.graph)
+    writer.add_graph(sess.graph)
+
+    # config = tf.contrib.tensorboard.plugins.projector.ProjectorConfig()
+    # embedding_config = config.embeddings.add()
+    # embedding_config.tensor_name = embedding.tensor_name
+    # embedding_config.sprite.single_image_dim.extend([28, 28])
+    # tf.contrib.tensorboard.plugins.projector.visualize_embeddings(writer, config)
     # GAN博弈开始
     print('train GAN....')
     for step in range(epoch):
@@ -127,26 +139,28 @@ with tf.Session() as sess:
         d_loss_sum = 0.0
         g_loss_sum = 0.0
 
-        for batch in range(100):
+        for batch in range(2):
             real = sample_datas[batch]
             # noise = noises[batch]            
             noise = random_data(1000, dim)
 
             # 训练D
-            d_loss_value, _ = sess.run([d_loss, d_optimizer], feed_dict={
+            d_loss_value, _, summary = sess.run([d_loss, d_optimizer, sum_var], feed_dict={
                 input_real:real,
                 input_fake:noise,
             })  
             # 记录数据，用于绘图
             d_loss_history.append(d_loss_value)
             d_loss_sum = d_loss_sum + d_loss_value
+            writer.add_summary(summary, batch)
 
             # 训练G
-            g_loss_value, _ = sess.run([g_loss, g_optimizer], feed_dict={
+            g_loss_value, _, summary = sess.run([g_loss, g_optimizer, sum_var], feed_dict={
                 input_fake: noise,
                 })  
             g_loss_history.append(g_loss_value)
             g_loss_sum = g_loss_sum + g_loss_value
+            writer.add_summary(summary, batch)
 
 
         noise = random_data(1,length=dim)
