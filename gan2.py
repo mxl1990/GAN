@@ -7,6 +7,8 @@ from tensorflow.python.ops import variable_scope
 from discriminator import Discrim
 from generator import Gen
 dim = 1000  # 每一个样本由1000个
+BATCH_NUM = 100
+BATCH_SIZE = 100
 # %matplotlib inline
 
 def sample_data(size, length=100):
@@ -72,42 +74,44 @@ input_real = tf.placeholder(tf.float32, shape=[None, dim])
 fake_data = Gen(input_fake)
 
 # Discrim的输出
-output_real_, output_real = Discrim(input_real)
-output_fake_, output_fake = Discrim(fake_data)
+with tf.variable_scope("Discrim") as scope:
+    output_real_, output_real = Discrim(input_real)
+    scope.reuse_variables()
+    output_fake_, output_fake = Discrim(fake_data)
 
 # 样本的标签数据
 y_real = tf.placeholder(tf.float32, shape=[None, 1])
 y_fake = tf.placeholder(tf.float32, shape=[None, 1])
 
 # 产生用于训练的样本数据
-sample_datas = gen_samples(100, 1000, dim)
+sample_datas = gen_samples(BATCH_NUM, BATCH_SIZE, dim)
 
 
 ##################################### 定义损失函数
 # D的损失函数
 d_loss_real = tf.reduce_mean(
-    tf.nn.sigmoid_cross_entropy_with_logits(logits=output_real_, labels=tf.ones_like(output_real)))
+    tf.nn.sigmoid_cross_entropy_with_logits(logits=output_real_, labels=tf.ones_like(output_real_)))
 d_loss_fake = tf.reduce_mean(
-    tf.nn.sigmoid_cross_entropy_with_logits(logits=output_fake_, labels=tf.zeros_like(output_fake)))
+    tf.nn.sigmoid_cross_entropy_with_logits(logits=output_fake_, labels=tf.zeros_like(output_fake_)))
 d_loss = (d_loss_real + d_loss_fake ) / 2
 # G的损失函数
 g_loss = tf.reduce_mean(
-    tf.nn.sigmoid_cross_entropy_with_logits(logits=output_fake_, labels=tf.ones_like(output_fake)))  
+    tf.nn.sigmoid_cross_entropy_with_logits(logits=output_fake_, labels=tf.ones_like(output_fake_)))  
 
 #################################### 定义优化器
 # D的优化器
 # d_optimizer = tf.train.AdamOptimizer(0.0001).minimize(
 d_optimizer = tf.train.GradientDescentOptimizer(0.001).minimize(
     d_loss,
-    # global_step=tf.Variable(0),
+    global_step=tf.Variable(0),
     var_list=[t for t in tf.global_variables() if t.name.startswith('Discrim')]
 )
 
 # G的优化器
-# g_optimizer = tf.train.AdamOptimizer(0.0002).minimize(
-g_optimizer = tf.train.GradientDescentOptimizer(0.002).minimize(
+g_optimizer = tf.train.AdamOptimizer(0.0002).minimize(
+# g_optimizer = tf.train.GradientDescentOptimizer(0.02).minimize(
     g_loss,
-    # global_step=tf.Variable(0),
+    global_step=tf.Variable(0),
     var_list=[t for t in tf.global_variables() if t.name.startswith('Generator')]
 )
 
@@ -120,6 +124,7 @@ sum_var = tf.summary.merge_all()
 
 epoch = 10
 g_loss_old = 100
+life_time = 0
 with tf.Session() as sess:
     sess.run(tf.global_variables_initializer())
     # 可视化整个过程
@@ -139,10 +144,10 @@ with tf.Session() as sess:
         d_loss_sum = 0.0
         g_loss_sum = 0.0
 
-        for batch in range(2):
+        for batch in range(BATCH_NUM):
             real = sample_datas[batch]
             # noise = noises[batch]            
-            noise = random_data(1000, dim)
+            noise = random_data(BATCH_SIZE, dim)
 
             # 训练D
             d_loss_value, _, summary = sess.run([d_loss, d_optimizer, sum_var], feed_dict={
@@ -162,13 +167,43 @@ with tf.Session() as sess:
             g_loss_sum = g_loss_sum + g_loss_value
             writer.add_summary(summary, batch)
 
+                # if g_loss_value < 0.05:
+                #     break
+
+                # if life_time > 1000:
+                #     life_time = 0
+                #     g_loss_old = g_loss_value
+                #     break
+
+                # if g_loss_old > g_loss_value:
+                #     g_loss_old = g_loss_value
+                #     g_loss_sum = g_loss_sum + g_loss_value
+                #     life_time = 0
+                #     break
+
+                # life_time = life_time + 1
+                # print("train Gen with loss", str(g_loss_value), "and should lower than", str(g_loss_old))
+            # # 训练G
+            # g_loss_value, _ = sess.run([g_loss, g_optimizer], feed_dict={
+            #     input_fake: noise,
+            #     })  
+            # # g_loss_history.append(g_loss_value)
+            # # g_loss_sum = g_loss_sum + g_loss_value
+
+            # # 训练G
+            # g_loss_value, _ = sess.run([g_loss, g_optimizer], feed_dict={
+            #     input_fake: noise,
+            #     })  
+            # g_loss_history.append(g_loss_value)
+            # g_loss_sum = g_loss_sum + g_loss_value
+
 
         noise = random_data(1,length=dim)
         generate = sess.run(fake_data, feed_dict={
             input_fake: noise,
         })
         print("[%4d] GAN-d-loss: %.12f  GAN-g-loss: %.12f   generate-mean: %.4f   generate-std: %.4f" % (step,
-                    d_loss_sum / 100, g_loss_sum / 100, generate.mean(), generate.std() ))
+                    d_loss_sum / BATCH_NUM, g_loss_sum / BATCH_NUM, generate.mean(), generate.std() ))
             # while True:
             #     g_loss_value, _ = sess.run([g_loss, g_optimizer], feed_dict={
             #         input_fake: noise,
