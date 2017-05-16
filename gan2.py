@@ -160,12 +160,12 @@ with tf.Session() as sess:
             # tf.summary.scalar('d_loss', d_loss_value)
 
             # 训练G
-            g_loss_value, _, sum_v2= sess.run([g_loss, g_optimizer, sum_var], feed_dict={
+            g_loss_value, _= sess.run([g_loss, g_optimizer], feed_dict={
                 input_fake: noise,
                 })  
             g_loss_history.append(g_loss_value)
             g_loss_sum = g_loss_sum + g_loss_value
-            write.add_summary(sum_v2, batch)
+            # write.add_summary(sum_v2, batch)
             # writer.add_summary(g_loss_value, batch)
 
 
