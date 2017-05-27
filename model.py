@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 import tensorflow as tf
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.pyplot import savefig
 
 class GAN(object):
 	def __init__(self, sess, input_dim, gen_layer_dim, dis_layer_dim):
@@ -20,8 +23,8 @@ class GAN(object):
 		# 用Gen生成数据
 		self.fake_data = self.generator(self.input_fake)
 
-		self.output_real = self.discriminator(self.input_real)
-		self.output_fake = self.discriminator(self.fake_data)
+		self.output_real = self.discriminator(self.input_real, reuse=False)
+		self.output_fake = self.discriminator(self.fake_data, reuse=True)
 
 		self.d_learn_rate = tf.placeholder(tf.float32, shape=[])
 		self.g_learn_rate = tf.placeholder(tf.float32, shape=[])
@@ -29,8 +32,9 @@ class GAN(object):
 		##################################### 定义损失函数
 		# D的损失函数
 		with tf.name_scope('d_loss'):
+			self.d_test = tf.ones_like(self.output_real) - self.output_real
 			self.d_loss_real = tf.reduce_mean(
-				tf.log(tf.subtract(tf.zeros_like(self.output_real),self.output_real)))
+				tf.log(tf.subtract(tf.ones_like(self.output_real),self.output_real)))
 			self.d_loss_fake = tf.reduce_mean(
 				tf.log(self.output_fake))
 			# d_loss_real = tf.reduce_mean(
@@ -82,7 +86,7 @@ class GAN(object):
 			Weights3 = tf.Variable(tf.random_uniform([gen_dim, input_dim], -1, 1), name='dw3')
 			biases3 = tf.Variable(tf.constant(0.1, shape = [input_dim]), name='db3')
 			G_output3= tf.matmul(G_output2, Weights3) + biases3
-			# G_output3 = tf.nn.sigmoid(G_output3)
+			G_output3 = tf.nn.sigmoid(G_output3)
 
 			# tf.summary.histogram("dw3_gen", Weights3)
 			# tf.summary.histogram("db3_gen", biases3)
@@ -90,7 +94,7 @@ class GAN(object):
 		# G_PARAMS = [Weights, biases, Weights2, biases2, Weights3, biases3]  # G的参数
 		return G_output3
 
-	def discriminator(self, input_data, reuse=True):
+	def discriminator(self, input_data, reuse=False):
 		input_dim = self.input_dim
 		dis_dim = self.dis_dim
 		sess = self.sess
@@ -98,50 +102,52 @@ class GAN(object):
 			if reuse:
 				scope.reuse_variables()
 
-			# dWeights = tf.get_variable(name='dw1', shape=[dim,1024], initializer=tf.random_uniform_initializer(-1,1))
-			# dbiases = tf.get_variable(name='db1', shape = [1, 1024], initializer=tf.constant_initializer(0.1))
-			dWeights = tf.Variable(tf.random_uniform([input_dim, 5, dis_dim], -1, 1), name="dw1")
-			dbiases = tf.Variable(tf.constant(0.1, shape=[5,dis_dim]), name='db1')
+			dWeights = tf.get_variable(name='dw1', shape=[input_dim, 5, dis_dim], 
+							initializer=tf.random_uniform_initializer(-1,1))
+			dbiases = tf.get_variable(name='db1', shape = [5, dis_dim], 
+							initializer=tf.constant_initializer(0.1))
+
 			D_output = tf.tensordot(input_data, dWeights, axes=1) + dbiases
-			D_output = tf.reduce_max(D_output, axis=0)
+			D_output = tf.reduce_max(D_output, axis=1)
 			# D_output = tf.nn.relu(D_output)
-			# D_output = tf.nn.dropout(D_output, 0.9)
+			# D_output = tf.nn.dropout(D_output, 0.5)
 			# D_output = max_out(D_output)
-				# 用于可视化
+			# 用于可视化
 			# tf.summary.histogram("dw1", dWeights)
 			# tf.summary.histogram("db1", dbiases)
-			dWeights = tf.Print(dWeights,[dWeights], "dWeights:")
-			dbiases = tf.Print(dbiases,[dbiases], "dbiases:")
 
-				# 第二层
-			dWeights2 = tf.Variable(tf.random_uniform([dis_dim, 5, dis_dim], -1, 1), name="dw2")
-			dbiases2 = tf.Variable(tf.constant(0.1, shape=[5,dis_dim]), name='db2')
+			# 第二层
+			dWeights2 = tf.get_variable(name='dw2', shape=[dis_dim, 5, dis_dim], 
+							initializer=tf.random_uniform_initializer(-1,1))
+			dbiases2 = tf.get_variable(name='db2', shape = [5, dis_dim], 
+							initializer=tf.constant_initializer(0.1))
+
 			D_output2 = tf.tensordot(D_output, dWeights2, axes=1) + dbiases2
-			D_output2 = tf.reduce_max(D_output2, axis=0)
+			D_output2 = tf.reduce_max(D_output2, axis=1)
 			
 			# D_output2 = tf.nn.sigmoid(D_output2)
-			# D_output2 = tf.nn.dropout(D_output2, 0.9)
+			# D_output2 = tf.nn.dropout(D_output2, 0.5)
 			# D_output2 = max_out(D_output2)
 
 			# tf.summary.histogram("dw2", dWeights2)
 			# tf.summary.histogram("db2", dbiases2)
-			dWeights2 = tf.Print(dWeights2,[dWeights2], "dWeights2:")
-			dbiases2 = tf.Print(dbiases2,[dbiases2], "dbiases2:")
 
-				# 第三层
-			dWeights3 = tf.Variable(tf.random_uniform([dis_dim, 1], -1, 1), name='dw3')
-			dbiases3 = tf.Variable(tf.constant(0.1, shape=[1]), name='db3')
+			# 第三层
+			dWeights3 = tf.get_variable(name='dw3', shape=[dis_dim, 1], 
+							initializer=tf.random_uniform_initializer(-1,1))
+			dbiases3 = tf.get_variable(name='db3', shape = [1], 
+							initializer=tf.constant_initializer(0.1))
+
 			D_output3 = tf.matmul(D_output2, dWeights3) + dbiases3
 			# D_output3 = tf.nn.relu(D_output3)
 			D_output3 = tf.nn.sigmoid(D_output3)
 
-			# D_output3 = tf.nn.dropout(D_output3, 0.9)
+			# D_output3 = tf.nn.dropout(D_output3, 0.5)
+			D_output3 = tf.clip_by_value(D_output3, 1e-10, tf.reduce_max(D_output3))
 			# D_output3 = max_out(D_output3)
 
 			# tf.summary.histogram("dw3", dWeights3)
 			# tf.summary.histogram("db3", dbiases3)
-			dWeights3 = tf.Print(dWeights3,[dWeights3], "dWeights3:")
-			dbiases3 = tf.Print(dbiases3,[dbiases3], "dbiases3:")
 
 			# 返回一个原始输出和一个经过激励以后的输出
 			# 返回非激励用于计算Loss
@@ -187,7 +193,13 @@ class GAN(object):
 		# 产生用于训练的样本数据
 		sample_datas = gen_samples(batch_num, batch_size, self.input_dim)
 		from util import random_data
-		
+		# logfile = open("1.txt", 'w')
+		dis_list = [t for t in tf.global_variables() if t.name.startswith('Discrim')]
+
+		# print("start with dis parameters:")
+		# for i in dis_list:
+		# 	print(i.name, self.sess.run(i))
+
 		print('train GAN....')
 		for step in range(config.epoch):
 			# 使用G生成一批样本:
@@ -196,11 +208,13 @@ class GAN(object):
 			g_loss_sum = 0.0
 
 			for batch in range(batch_num):
-				real = sample_datas[batch]           
+				real = sample_datas[batch] 
+				# print("real get input are", real.shape)          
 				noise = random_data(batch_size, self.input_dim)
+				# print("noise are", noise.shape)
 
 				# 训练D
-				d_loss_value, _, sum_v= sess.run([self.d_loss, d_optimizer,sum_var], feed_dict={
+				d_loss_value, real_output, fake_output, fake, _, sum_v= sess.run([self.d_loss, self.output_fake, self.output_real, self.fake_data, d_optimizer,sum_var], feed_dict={
 					self.input_real:real,
 					self.input_fake:noise,
 					self.d_learn_rate:d_rate,
@@ -217,6 +231,18 @@ class GAN(object):
 					})  
 				g_loss_sum = g_loss_sum + g_loss_value
 
+				print("after %ith batch loss are g_loss:%.14f, d_loss:%.14f" %(batch,g_loss_value, d_loss_value))
+				print("%ith batch output are:"%batch)
+				print("output real is", real_output)
+				print("output fake is", fake_output)
+				print('fake result is', fake)
+				# print("loss are, d_loss: %.14f, g_loss:%.14f"%(d_loss_value, g_loss_value))
+
+				# print("after %ith batch dis parameters are" % batch)
+				# for i in dis_list:
+				# 	print(i.name, self.sess.run(i))
+
+
 			noise = random_data(1,length=self.input_dim)
 			generate = sess.run(self.fake_data, feed_dict={
 				self.input_fake: noise,
@@ -224,7 +250,7 @@ class GAN(object):
 			print("[%4d] GAN-d-loss: %.12f  GAN-g-loss: %.12f   generate-mean: %.4f   generate-std: %.4f" % (
 					step,d_loss_sum / batch_num, g_loss_sum / batch_num, generate.mean(), generate.std() ))
 
-		noise = random_data(1,length=dim)
+		noise = random_data(1,length=self.input_dim)
 		generate = sess.run(self.fake_data, feed_dict={
 			self.input_fake: noise,
 		})
