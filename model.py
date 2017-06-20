@@ -22,11 +22,11 @@ class GAN(object):
 		# 输入到Discrim中的数据
 		self.input_real = tf.placeholder(tf.float32, shape=[None, self.input_dim], name='input_real')
 		# 用Gen生成数据
-		self.fake_data = self.generator(self.input_fake)
+		self.fake_data_no, self.fake_data = self.generator(self.input_fake)
 
 		
-		self.output_real = self.discriminator(self.input_real, reuse=False)
-		self.output_fake = self.discriminator(self.fake_data, reuse=True)
+		self.output_real_no, self.output_real = self.discriminator(self.input_real, reuse=False)
+		self.output_fake_no, self.output_fake = self.discriminator(self.fake_data, reuse=True)
 		
 
 		self.d_learn_rate = tf.placeholder(tf.float32, shape=[])
@@ -35,28 +35,30 @@ class GAN(object):
 		##################################### 定义损失函数
 		# D的损失函数
 		with tf.name_scope('d_loss'):
-			d_loss_real_sub = tf.subtract(tf.ones_like(self.output_real),self.output_real)
+			# d_loss_real_sub = tf.subtract(tf.ones_like(self.output_real),self.output_real)
+			# self.d_loss_real = tf.reduce_mean(
+			# 	# tf.log(tf.clip_by_value(d_loss_real_sub, 1e-10, tf.reduce_max(d_loss_real_sub))))
+			# 	tf.log(d_loss_real_sub))
+			# self.d_loss_fake = tf.reduce_mean(
+			# 	# tf.log(tf.clip_by_value(self.output_fake, 1e-10, tf.reduce_max(self.output_fake))))'
+			# 	tf.log(self.output_fake))
 			self.d_loss_real = tf.reduce_mean(
-				tf.log(tf.clip_by_value(d_loss_real_sub, 1e-10, tf.reduce_max(d_loss_real_sub))))
+				tf.nn.sigmoid_cross_entropy_with_logits(logits=self.output_real_no, labels=tf.ones_like(self.output_real_no))
+				)
 			self.d_loss_fake = tf.reduce_mean(
-				tf.log(tf.clip_by_value(self.output_fake, 1e-10, tf.reduce_max(self.output_fake))))
-			# d_loss_real = tf.reduce_mean(
-			# 	tf.nn.sigmoid_cross_entropy_with_logits(logits=output_real, labels=tf.ones_like(output_real))
-			# 	)
-			# d_loss_fake = tf.reduce_mean(
-			# 	tf.nn.sigmoid_cross_entropy_with_logits(logits=output_fake, labels=tf.zeros_like(output_fake))
-			# 	)
-			self.d_loss = (- self.d_loss_real - self.d_loss_fake ) / 2
+				tf.nn.sigmoid_cross_entropy_with_logits(logits=self.output_fake_no, labels=tf.zeros_like(self.output_fake_no))
+				)
+			self.d_loss = (self.d_loss_real + self.d_loss_fake ) / 2
 			tf.summary.scalar('d_loss_value', self.d_loss)
 		# G的损失函数
 		with tf.name_scope('g_loss'):
-			# self.g_loss = tf.reduce_mean(
-			# 	tf.log(tf.subtract(tf.ones_like(self.output_fake),self.output_fake)))
+			self.g_loss = tf.reduce_mean(
+				tf.log(tf.subtract(tf.ones_like(self.output_fake),self.output_fake)))
 			self.g_loss = -tf.reduce_mean(
 				tf.log(self.output_fake)
 				)
-			# g_loss = tf.reduce_mean(
-			# 	tf.nn.sigmoid_cross_entropy_with_logits(logits=output_fake, labels=tf.ones_like(output_fake))
+			# self.g_loss = tf.reduce_mean(
+			# 	tf.nn.sigmoid_cross_entropy_with_logits(logits=self.output_fake_no, labels=tf.ones_like(self.output_fake_no))
 			# 	)
 			tf.summary.scalar('g_loss_value', self.g_loss)
 
@@ -77,28 +79,28 @@ class GAN(object):
 			G_output = tf.nn.relu(G_output)
 			# G_output = tf.nn.sigmoid(G_output)
 
-			# tf.summary.histogram("dw1_gen", Weights)
-			# tf.summary.histogram("db1_gen", biases)
+			tf.summary.histogram("dw1_gen", Weights)
+			tf.summary.histogram("db1_gen", biases)
 			# 第二层
 			Weights2 = tf.Variable(tf.random_uniform([gen_dim, gen_dim], -0.05, 0.05), name='dw2')
 			biases2 = tf.Variable(tf.constant(0., shape = [gen_dim]), name='db2')
 			G_output2 = tf.matmul(G_output, Weights2) + biases2
 
-			# tf.summary.histogram("dw2_gen", Weights2)
-			# tf.summary.histogram("db2_gen", biases2)
+			tf.summary.histogram("dw2_gen", Weights2)
+			tf.summary.histogram("db2_gen", biases2)
 			# 第二层激活函数为sigmoid
 			G_output2 = tf.nn.relu(G_output2)
 			# 第三层
 			Weights3 = tf.Variable(tf.random_uniform([gen_dim, input_dim], -0.05, 0.05), name='dw3')
 			biases3 = tf.Variable(tf.constant(0., shape = [input_dim]), name='db3')
 			G_output3= tf.matmul(G_output2, Weights3) + biases3
-			G_output3 = tf.nn.sigmoid(G_output3)
+			G_output3_ = tf.nn.sigmoid(G_output3)
 
-			# tf.summary.histogram("dw3_gen", Weights3)
-			# tf.summary.histogram("db3_gen", biases3)
+			tf.summary.histogram("dw3_gen", Weights3)
+			tf.summary.histogram("db3_gen", biases3)
 
 		# G_PARAMS = [Weights, biases, Weights2, biases2, Weights3, biases3]  # G的参数
-		return G_output3
+		return G_output3, G_output3_
 
 	def discriminator(self, input_data, reuse=False):
 		input_dim = self.input_dim
@@ -119,8 +121,8 @@ class GAN(object):
 			# D_output = tf.nn.dropout(D_output, 0.5)
 			# D_output = max_out(D_output)
 			# 用于可视化
-			# tf.summary.histogram("dw1", dWeights)
-			# tf.summary.histogram("db1", dbiases)
+			tf.summary.histogram("dw1", dWeights)
+			tf.summary.histogram("db1", dbiases)
 
 			# 第二层
 			dWeights2 = tf.get_variable(name='dw2', shape=[dis_dim, 5, dis_dim], 
@@ -135,8 +137,8 @@ class GAN(object):
 			# D_output2 = tf.nn.dropout(D_output2, 0.5)
 			# D_output2 = max_out(D_output2)
 
-			# tf.summary.histogram("dw2", dWeights2)
-			# tf.summary.histogram("db2", dbiases2)
+			tf.summary.histogram("dw2", dWeights2)
+			tf.summary.histogram("db2", dbiases2)
 
 			# 第三层
 			dWeights3 = tf.get_variable(name='dw3', shape=[dis_dim, 1], 
@@ -146,16 +148,16 @@ class GAN(object):
 
 			D_output3 = tf.matmul(D_output2, dWeights3) + dbiases3
 			# D_output3 = tf.nn.relu(D_output3)
-			D_output3 = tf.nn.sigmoid(D_output3)
+			D_output3_ = tf.nn.sigmoid(D_output3)
 
 			# D_output3 = tf.nn.dropout(D_output3, 0.5)
 			# D_output3 = tf.clip_by_value(D_output3, 1e-10, tf.reduce_max(D_output3))
 			# D_output3 = max_out(D_output3)
 
-			# tf.summary.histogram("dw3", dWeights3)
-			# tf.summary.histogram("db3", dbiases3)
+			tf.summary.histogram("dw3", dWeights3)
+			tf.summary.histogram("db3", dbiases3)
 
-			return D_output3
+			return D_output3, D_output3_
 
 	def train(self, config):
 		#################################### 定义优化器
@@ -252,6 +254,14 @@ class GAN(object):
 			})
 			print("[%4d] GAN-d-loss: %.12f  GAN-g-loss: %.12f   generate-mean: %.4f   generate-std: %.4f" % (
 					step,d_loss_sum / batch_num, g_loss_sum / batch_num, generate.mean(), generate.std() ))
+			# print("generate data is", generate)
+			# (data, bins) = np.histogram(generate[0])
+			# (test, bins2) = np.histogram(noise[0])
+			# (smp, bin3) = np.histogram(sample_datas[0][0])
+			# plt.plot(bins[:-1], data, c="r")
+			# plt.plot(bins2[:-1], test, c='b')
+			# plt.plot(bin3[:-1], smp, c='g')
+			# savefig("final.jpg") 
 
 		noise = random_data(1,length=self.input_dim)
 		generate = sess.run(self.fake_data, feed_dict={
@@ -259,21 +269,15 @@ class GAN(object):
 		})
 		print("finally Loss: GAN-d-loss: %.12f  GAN-g-loss: %.12f   generate-mean: %.4f   generate-std: %.4f" % (
 						d_loss_value, g_loss_value, generate.mean(), generate.std() ))
-		# (data, bins) = np.histogram(generate[0])
-		# (test, bins2) = np.histogram(noise[0])
-		# (smp, bin3) = np.histogram(sample_datas[0][0])
-		# plt.plot(bins[:-1], data, c="r")
-		# plt.plot(bins2[:-1], test, c='b')
-		# plt.plot(bin3[:-1], smp, c='g')
-		# plt.show()
-		# savefig("final.jpg") 
+		(data, bins) = np.histogram(generate[0])
+		(test, bins2) = np.histogram(noise[0])
+		(smp, bin3) = np.histogram(sample_datas[0][0])
+		plt.plot(bins[:-1], data, c="r")
+		plt.plot(bins2[:-1], test, c='b')
+		plt.plot(bin3[:-1], smp, c='g')
+		savefig("final.jpg") 
 
 		print("train finish...")
-
-
-
-# d_rate = np.array(0.001)
-# g_rate = np.array(0.002)
 
 
 
