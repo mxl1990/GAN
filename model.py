@@ -79,15 +79,22 @@ class GAN(object):
 			G_output = tf.nn.relu(G_output)
 			# G_output = tf.nn.sigmoid(G_output)
 
-			tf.summary.histogram("dw1_gen", Weights)
-			tf.summary.histogram("db1_gen", biases)
+			# tf.summary.histogram("dw1_gen", Weights)
+			# tf.summary.histogram("db1_gen", biases)
+
+			tf.summary.tensor_summary("dw1_gen", Weights)
+			tf.summary.tensor_summary("db1_gen", biases)
+			
 			# 第二层
 			Weights2 = tf.Variable(tf.random_uniform([gen_dim, gen_dim], -0.05, 0.05), name='dw2')
 			biases2 = tf.Variable(tf.constant(0., shape = [gen_dim]), name='db2')
 			G_output2 = tf.matmul(G_output, Weights2) + biases2
 
-			tf.summary.histogram("dw2_gen", Weights2)
-			tf.summary.histogram("db2_gen", biases2)
+			# tf.summary.histogram("dw2_gen", Weights2)
+			# tf.summary.histogram("db2_gen", biases2)
+			tf.summary.tensor_summary("dw2_gen", Weights2)
+			tf.summary.tensor_summary("db2_gen", biases2)
+
 			# 第二层激活函数为sigmoid
 			G_output2 = tf.nn.relu(G_output2)
 			# 第三层
@@ -96,8 +103,11 @@ class GAN(object):
 			G_output3= tf.matmul(G_output2, Weights3) + biases3
 			G_output3_ = tf.nn.sigmoid(G_output3)
 
-			tf.summary.histogram("dw3_gen", Weights3)
-			tf.summary.histogram("db3_gen", biases3)
+			# tf.summary.histogram("dw3_gen", Weights3)
+			# tf.summary.histogram("db3_gen", biases3)
+			tf.summary.tensor_summary("dw3_gen", Weights3)
+			tf.summary.tensor_summary("db3_gen", biases3)
+
 
 		# G_PARAMS = [Weights, biases, Weights2, biases2, Weights3, biases3]  # G的参数
 		return G_output3, G_output3_
@@ -121,8 +131,10 @@ class GAN(object):
 			# D_output = tf.nn.dropout(D_output, 0.5)
 			# D_output = max_out(D_output)
 			# 用于可视化
-			tf.summary.histogram("dw1", dWeights)
-			tf.summary.histogram("db1", dbiases)
+			# tf.summary.histogram("dw1", dWeights)
+			# tf.summary.histogram("db1", dbiases)
+			tf.summary.tensor_summary("dw1", dWeights)
+			tf.summary.tensor_summary("db1", dbiases)
 
 			# 第二层
 			dWeights2 = tf.get_variable(name='dw2', shape=[dis_dim, 5, dis_dim], 
@@ -137,8 +149,10 @@ class GAN(object):
 			# D_output2 = tf.nn.dropout(D_output2, 0.5)
 			# D_output2 = max_out(D_output2)
 
-			tf.summary.histogram("dw2", dWeights2)
-			tf.summary.histogram("db2", dbiases2)
+			# tf.summary.histogram("dw2", dWeights2)
+			# tf.summary.histogram("db2", dbiases2)
+			tf.summary.tensor_summary("dw2", dWeights2)
+			tf.summary.tensor_summary("db2", dbiases2)
 
 			# 第三层
 			dWeights3 = tf.get_variable(name='dw3', shape=[dis_dim, 1], 
@@ -154,8 +168,10 @@ class GAN(object):
 			# D_output3 = tf.clip_by_value(D_output3, 1e-10, tf.reduce_max(D_output3))
 			# D_output3 = max_out(D_output3)
 
-			tf.summary.histogram("dw3", dWeights3)
-			tf.summary.histogram("db3", dbiases3)
+			# tf.summary.histogram("dw3", dWeights3)
+			# tf.summary.histogram("db3", dbiases3)
+			tf.summary.tensor_summary("dw3", dWeights3)
+			tf.summary.tensor_summary("db3", dbiases3)
 
 			return D_output3, D_output3_
 
