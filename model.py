@@ -52,8 +52,8 @@ class GAN(object):
 			tf.summary.scalar('d_loss_value', self.d_loss)
 		# G的损失函数
 		with tf.name_scope('g_loss'):
-			self.g_loss = tf.reduce_mean(
-				tf.log(tf.subtract(tf.ones_like(self.output_fake),self.output_fake)))
+			# self.g_loss = tf.reduce_mean(
+			# 	tf.log(tf.subtract(tf.ones_like(self.output_fake),self.output_fake)))
 			self.g_loss = -tf.reduce_mean(
 				tf.log(self.output_fake)
 				)
