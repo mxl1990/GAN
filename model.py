@@ -70,7 +70,7 @@ class GAN(object):
 			input_dim = self.input_dim
 
 			# 随机权重
-			Weights = tf.Variable(tf.random_uniform([input_dim, gen_dim], -0.05, 0.05), name='dw1')
+			Weights = tf.Variable(tf.random_uniform([input_dim, gen_dim], -1.0, 1), name='dw1')
 			# 偏差为0.1
 			biases = tf.Variable(tf.constant(0., shape = [1, gen_dim]), name='db1')
 			# G_output = z * w + b
@@ -88,7 +88,7 @@ class GAN(object):
 			# tf.summary.tensor_summary("db1_gen", biases)
 			
 			# 第二层
-			Weights2 = tf.Variable(tf.random_uniform([gen_dim, gen_dim], -0.05, 0.05), name='dw2')
+			Weights2 = tf.Variable(tf.random_uniform([gen_dim, gen_dim], -1.0, 1.0), name='dw2')
 			biases2 = tf.Variable(tf.constant(0., shape = [gen_dim]), name='db2')
 			G_output2 = tf.matmul(G_output, Weights2) + biases2
 			# 第二层激活函数为sigmoid
@@ -218,7 +218,7 @@ class GAN(object):
 
 		from util import gen_samples
 		# 产生用于训练的样本数据
-		sample_datas = gen_samples(batch_num, batch_size, self.input_dim)
+		sample_datas, self.max_num = gen_samples(batch_num, batch_size, self.input_dim)
 		sample_datas = self.normalize_data(sample_datas)
 		from util import random_data
 		# logfile = open("1.txt", 'w')
@@ -305,10 +305,10 @@ class GAN(object):
 		print("train finish...")
 
 	def normalize_data(self, data):
-		return np.array(data) / 100.0
+		return  np.array(data) / float(self.max_num)
 
 	def denormal_data(self, data):
-		return np.array(data) * 100
+		return np.array(data) * self.max_num
 
 
 
