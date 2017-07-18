@@ -25,11 +25,14 @@ def gen_samples(batch_num=100, batch_size=1000, sample_dim=100):
 	'''
 	print("begin to generate sample data")
 	samples = []
+	max_num = 0
 	for i in range(batch_num):
 		sample = sample_data(batch_size, sample_dim)
+		tmp = np.max(sample)
+		max_num = tmp if max_num < tmp else max_num
 		samples.append(sample)
 	print("generating process finish")
-	return samples
+	return samples, max_num
 
 
 def random_data(size, length=100):
