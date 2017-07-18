@@ -109,8 +109,8 @@ class GAN(object):
 
 			tf.summary.histogram("dw3_gen", Weights3)
 			tf.summary.histogram("db3_gen", biases3)
-			tf.summary.tensor_summary("dw3_gen", Weights3)
-			tf.summary.tensor_summary("db3_gen", biases3)
+			# tf.summary.tensor_summary("dw3_gen", Weights3)
+			# tf.summary.tensor_summary("db3_gen", biases3)
 
 
 		# G_PARAMS = [Weights, biases, Weights2, biases2, Weights3, biases3]  # G的参数
@@ -137,8 +137,8 @@ class GAN(object):
 			# 用于可视化
 			tf.summary.histogram("dw1", dWeights)
 			tf.summary.histogram("db1", dbiases)
-			tf.summary.tensor_summary("dw1", dWeights)
-			tf.summary.tensor_summary("db1", dbiases)
+			# tf.summary.tensor_summary("dw1", dWeights)
+			# tf.summary.tensor_summary("db1", dbiases)
 
 			# 第二层
 			dWeights2 = tf.get_variable(name='dw2', shape=[dis_dim, 5, dis_dim], 
@@ -155,8 +155,8 @@ class GAN(object):
 
 			tf.summary.histogram("dw2", dWeights2)
 			tf.summary.histogram("db2", dbiases2)
-			tf.summary.tensor_summary("dw2", dWeights2)
-			tf.summary.tensor_summary("db2", dbiases2)
+			# tf.summary.tensor_summary("dw2", dWeights2)
+			# tf.summary.tensor_summary("db2", dbiases2)
 
 			# 第三层
 			dWeights3 = tf.get_variable(name='dw3', shape=[dis_dim, 1], 
@@ -174,8 +174,8 @@ class GAN(object):
 
 			tf.summary.histogram("dw3", dWeights3)
 			tf.summary.histogram("db3", dbiases3)
-			tf.summary.tensor_summary("dw3", dWeights3)
-			tf.summary.tensor_summary("db3", dbiases3)
+			# tf.summary.tensor_summary("dw3", dWeights3)
+			# tf.summary.tensor_summary("db3", dbiases3)
 
 			return D_output3, D_output3_
 
@@ -291,12 +291,12 @@ class GAN(object):
 		generate = sess.run(self.fake_data, feed_dict={
 			self.input_fake: noise,
 		})
-		generate = self.denormal_data(generate)
+		# generate = self.denormal_data(generate)
 		print("finally Loss: GAN-d-loss: %.12f  GAN-g-loss: %.12f   generate-mean: %.4f   generate-std: %.4f" % (
 						d_loss_value, g_loss_value, generate.mean(), generate.std() ))
-		(data, bins) = np.histogram(generate[0])
+		(data, bins) = np.histogram(self.denormal_data(generate[0]))
 		(test, bins2) = np.histogram(noise[0])
-		(smp, bin3) = np.histogram(sample_datas[0][0])
+		(smp, bin3) = np.histogram(self.denormal_data(sample_datas[0][0]))
 		plt.plot(bins[:-1], data, c="r")
 		plt.plot(bins2[:-1], test, c='b')
 		plt.plot(bin3[:-1], smp, c='g')
