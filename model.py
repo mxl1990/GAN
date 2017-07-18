@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import tensorflow as tf
+from tensorflow.python import debug as tfdbg
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import savefig
@@ -35,20 +36,20 @@ class GAN(object):
 		##################################### 定义损失函数
 		# D的损失函数
 		with tf.name_scope('d_loss'):
-			# d_loss_real_sub = tf.subtract(tf.ones_like(self.output_real),self.output_real)
-			# self.d_loss_real = tf.reduce_mean(
-			# 	# tf.log(tf.clip_by_value(d_loss_real_sub, 1e-10, tf.reduce_max(d_loss_real_sub))))
-			# 	tf.log(d_loss_real_sub))
-			# self.d_loss_fake = tf.reduce_mean(
-			# 	# tf.log(tf.clip_by_value(self.output_fake, 1e-10, tf.reduce_max(self.output_fake))))'
-			# 	tf.log(self.output_fake))
+			d_loss_real_sub = tf.subtract(tf.ones_like(self.output_real),self.output_real)
 			self.d_loss_real = tf.reduce_mean(
-				tf.nn.sigmoid_cross_entropy_with_logits(logits=self.output_real_no, labels=tf.ones_like(self.output_real_no))
-				)
+				# tf.log(tf.clip_by_value(d_loss_real_sub, 1e-10, tf.reduce_max(d_loss_real_sub))))
+				tf.log(d_loss_real_sub))
 			self.d_loss_fake = tf.reduce_mean(
-				tf.nn.sigmoid_cross_entropy_with_logits(logits=self.output_fake_no, labels=tf.zeros_like(self.output_fake_no))
-				)
-			self.d_loss = (self.d_loss_real + self.d_loss_fake ) / 2
+				# tf.log(tf.clip_by_value(self.output_fake, 1e-10, tf.reduce_max(self.output_fake))))'
+				tf.log(self.output_fake))
+			# self.d_loss_real = tf.reduce_mean(
+			# 	tf.nn.sigmoid_cross_entropy_with_logits(logits=self.output_real_no, labels=tf.ones_like(self.output_real_no))
+			# 	)
+			# self.d_loss_fake = tf.reduce_mean(
+			# 	tf.nn.sigmoid_cross_entropy_with_logits(logits=self.output_fake_no, labels=tf.zeros_like(self.output_fake_no))
+			# 	)
+			self.d_loss = -(self.d_loss_real + self.d_loss_fake ) / 2
 			tf.summary.scalar('d_loss_value', self.d_loss)
 		# G的损失函数
 		with tf.name_scope('g_loss'):
@@ -76,35 +77,38 @@ class GAN(object):
 			G_output = tf.matmul(noise, Weights) + biases
 			# Rectified Linear Units激活函数
 			# relu(x) = max(0,x)即比0大就取本身
-			G_output = tf.nn.relu(G_output)
+			# G_output = tf.nn.relu(G_output)
+			G_output = tf.nn.tanh(G_output)
 			# G_output = tf.nn.sigmoid(G_output)
 
-			# tf.summary.histogram("dw1_gen", Weights)
-			# tf.summary.histogram("db1_gen", biases)
+			tf.summary.histogram("dw1_gen", Weights)
+			tf.summary.histogram("db1_gen", biases)
 
-			tf.summary.tensor_summary("dw1_gen", Weights)
-			tf.summary.tensor_summary("db1_gen", biases)
+			# tf.summary.tensor_summary("dw1_gen", Weights)
+			# tf.summary.tensor_summary("db1_gen", biases)
 			
 			# 第二层
 			Weights2 = tf.Variable(tf.random_uniform([gen_dim, gen_dim], -0.05, 0.05), name='dw2')
 			biases2 = tf.Variable(tf.constant(0., shape = [gen_dim]), name='db2')
 			G_output2 = tf.matmul(G_output, Weights2) + biases2
-
-			# tf.summary.histogram("dw2_gen", Weights2)
-			# tf.summary.histogram("db2_gen", biases2)
-			tf.summary.tensor_summary("dw2_gen", Weights2)
-			tf.summary.tensor_summary("db2_gen", biases2)
-
 			# 第二层激活函数为sigmoid
-			G_output2 = tf.nn.relu(G_output2)
+			# G_output2 = tf.nn.relu(G_output2)
+			G_output2 = tf.nn.tanh(G_output2)
+
+			tf.summary.histogram("dw2_gen", Weights2)
+			tf.summary.histogram("db2_gen", biases2)
+			# tf.summary.tensor_summary("dw2_gen", Weights2)
+			# tf.summary.tensor_summary("db2_gen", biases2)
+
+			
 			# 第三层
 			Weights3 = tf.Variable(tf.random_uniform([gen_dim, input_dim], -0.05, 0.05), name='dw3')
 			biases3 = tf.Variable(tf.constant(0., shape = [input_dim]), name='db3')
 			G_output3= tf.matmul(G_output2, Weights3) + biases3
 			G_output3_ = tf.nn.sigmoid(G_output3)
 
-			# tf.summary.histogram("dw3_gen", Weights3)
-			# tf.summary.histogram("db3_gen", biases3)
+			tf.summary.histogram("dw3_gen", Weights3)
+			tf.summary.histogram("db3_gen", biases3)
 			tf.summary.tensor_summary("dw3_gen", Weights3)
 			tf.summary.tensor_summary("db3_gen", biases3)
 
@@ -131,8 +135,8 @@ class GAN(object):
 			# D_output = tf.nn.dropout(D_output, 0.5)
 			# D_output = max_out(D_output)
 			# 用于可视化
-			# tf.summary.histogram("dw1", dWeights)
-			# tf.summary.histogram("db1", dbiases)
+			tf.summary.histogram("dw1", dWeights)
+			tf.summary.histogram("db1", dbiases)
 			tf.summary.tensor_summary("dw1", dWeights)
 			tf.summary.tensor_summary("db1", dbiases)
 
@@ -149,8 +153,8 @@ class GAN(object):
 			# D_output2 = tf.nn.dropout(D_output2, 0.5)
 			# D_output2 = max_out(D_output2)
 
-			# tf.summary.histogram("dw2", dWeights2)
-			# tf.summary.histogram("db2", dbiases2)
+			tf.summary.histogram("dw2", dWeights2)
+			tf.summary.histogram("db2", dbiases2)
 			tf.summary.tensor_summary("dw2", dWeights2)
 			tf.summary.tensor_summary("db2", dbiases2)
 
@@ -168,8 +172,8 @@ class GAN(object):
 			# D_output3 = tf.clip_by_value(D_output3, 1e-10, tf.reduce_max(D_output3))
 			# D_output3 = max_out(D_output3)
 
-			# tf.summary.histogram("dw3", dWeights3)
-			# tf.summary.histogram("db3", dbiases3)
+			tf.summary.histogram("dw3", dWeights3)
+			tf.summary.histogram("db3", dbiases3)
 			tf.summary.tensor_summary("dw3", dWeights3)
 			tf.summary.tensor_summary("db3", dbiases3)
 
@@ -181,8 +185,9 @@ class GAN(object):
 		# d_optimizer = tf.train.AdamOptimizer(0.0001).minimize(
 		with tf.name_scope('D_train'):
 			# 0.001
-			d_optimizer = tf.train.GradientDescentOptimizer(self.d_learn_rate).minimize(
-			# d_optimizer = tf.train.AdamOptimizer(d_learn_rate).minimize(
+			# d_optimizer = tf.train.GradientDescentOptimizer(self.d_learn_rate).minimize(
+			# d_optimizer = tf.train.AdamOptimizer(self.d_learn_rate).minimize(
+			d_optimizer = tf.train.MomentumOptimizer(self.d_learn_rate, 0.5).minimize(
 				self.d_loss,
 				# global_step=tf.Variable(0),
 				var_list=[t for t in tf.global_variables() if t.name.startswith('Discrim')]
@@ -191,8 +196,9 @@ class GAN(object):
 		# G的优化器
 		with tf.name_scope('G_train'):
 			# 
-			# g_optimizer = tf.train.AdamOptimizer(g_learn_rate).minimize(
-			g_optimizer = tf.train.GradientDescentOptimizer(self.g_learn_rate).minimize(
+			# g_optimizer = tf.train.AdamOptimizer(self.g_learn_rate).minimize(
+			g_optimizer = tf.train.MomentumOptimizer( self.g_learn_rate, 0.5 ).minimize(
+			# g_optimizer = tf.train.GradientDescentOptimizer(self.g_learn_rate).minimize(
 				self.g_loss,
 				# global_step=tf.Variable(0),
 				var_list=[t for t in tf.global_variables() if t.name.startswith('Generator')]
@@ -213,6 +219,7 @@ class GAN(object):
 		from util import gen_samples
 		# 产生用于训练的样本数据
 		sample_datas = gen_samples(batch_num, batch_size, self.input_dim)
+		sample_datas = self.normalize_data(sample_datas)
 		from util import random_data
 		# logfile = open("1.txt", 'w')
 		dis_list = [t for t in tf.global_variables() if t.name.startswith('Discrim')]
@@ -268,6 +275,7 @@ class GAN(object):
 			generate = sess.run(self.fake_data, feed_dict={
 				self.input_fake: noise,
 			})
+			generate = self.denormal_data(generate)
 			print("[%4d] GAN-d-loss: %.12f  GAN-g-loss: %.12f   generate-mean: %.4f   generate-std: %.4f" % (
 					step,d_loss_sum / batch_num, g_loss_sum / batch_num, generate.mean(), generate.std() ))
 			# print("generate data is", generate)
@@ -283,6 +291,7 @@ class GAN(object):
 		generate = sess.run(self.fake_data, feed_dict={
 			self.input_fake: noise,
 		})
+		generate = self.denormal_data(generate)
 		print("finally Loss: GAN-d-loss: %.12f  GAN-g-loss: %.12f   generate-mean: %.4f   generate-std: %.4f" % (
 						d_loss_value, g_loss_value, generate.mean(), generate.std() ))
 		(data, bins) = np.histogram(generate[0])
@@ -294,6 +303,12 @@ class GAN(object):
 		savefig("final.jpg") 
 
 		print("train finish...")
+
+	def normalize_data(self, data):
+		return np.array(data) / 100.0
+
+	def denormal_data(self, data):
+		return np.array(data) * 100
 
 
 
