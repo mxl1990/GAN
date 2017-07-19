@@ -218,7 +218,7 @@ class GAN(object):
 
 		from util import gen_samples
 		# 产生用于训练的样本数据
-		sample_datas, self.max_num = gen_samples(batch_num, batch_size, self.input_dim)
+		sample_datas, self.max_num, self.min_num = gen_samples(batch_num, batch_size, self.input_dim)
 		sample_datas = self.normalize_data(sample_datas)
 		from util import random_data
 		# logfile = open("1.txt", 'w')
@@ -305,10 +305,15 @@ class GAN(object):
 		print("train finish...")
 
 	def normalize_data(self, data):
-		return  np.array(data) / float(self.max_num)
+		max_num = self.max_num
+		min_num = self.min_num
+		internal = float(max_num - min_num)
+		return  (np.array(data) - min_num) * 2 / internal - 1
 
 	def denormal_data(self, data):
-		return np.array(data) * self.max_num
-
+		max_num = self.max_num
+		min_num = self.min_num
+		internal = float(max_num - min_num)
+		return (np.array(data) + 1) * internal / 2 + min_num 
 
 
