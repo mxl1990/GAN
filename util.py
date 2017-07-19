@@ -25,14 +25,17 @@ def gen_samples(batch_num=100, batch_size=1000, sample_dim=100):
 	'''
 	print("begin to generate sample data")
 	samples = []
-	max_num = 0
+	max_num = -np.inf
+	min_num = np.inf
 	for i in range(batch_num):
 		sample = sample_data(batch_size, sample_dim)
 		tmp = np.max(sample)
+		tmp2 = np.min(sample)
 		max_num = tmp if max_num < tmp else max_num
+		min_num = tmp2 if min_num > tmp2 else min_num
 		samples.append(sample)
 	print("generating process finish")
-	return samples, max_num
+	return samples, max_num, min_num
 
 
 def random_data(size, length=100):
