@@ -10,5 +10,7 @@ TensorFlow implementation of Generative Adversarial Nets which can generate some
 - PIL(optional, if you want to run code in MNIST set)
 
 ## Usage
-If you want to run simple sample learn to draw normal distrubition, just run with:  
-$ python main.py
+If you want to run simple sample learn to draw normal distrubition, just run with:    
+    python main.py  
+If you want to run GAN on MNIST data set, just run with:  
+    python main_mnist.py
