@@ -11,5 +11,5 @@ These code will implement the Generative Adversarial Nets(GAN) in TensorFlow, if
 - PIL(optional, if you want to run code in MNIST set)
 
 # Usage
-If you want to run simple sample learn to draw normal distrubition, just run with
+If you want to run simple sample learn to draw normal distrubition, just run with:  
 $ python main.py
