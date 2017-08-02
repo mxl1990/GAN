@@ -84,78 +84,39 @@ class GAN(object):
 			if reuse:
 				scope.reuse_variables()
 
-			dWeights = tf.get_variable(name='dis_w1', shape=[input_dim, dis_dim], 
+			dWeights = tf.get_variable(name='dw1', shape=[input_dim, dis_dim, 5], 
 							initializer=tf.random_uniform_initializer(-0.1, 0.1))
-			dbiases = tf.get_variable(name='dis_b1', shape = [dis_dim], 
+			dbiases = tf.get_variable(name='db1', shape = [dis_dim, 5], 
 							initializer=tf.constant_initializer(0.))
-
-			D_output = tf.matmul(input_data, dWeights) + dbiases
-			D_output = tf.nn.tanh(D_output)
+			D_output = tf.tensordot(input_data, dWeights, axes=1) + dbiases
+			D_output = tf.reduce_max(D_output, axis=2)
 			D_output = tf.nn.dropout(D_output, self.drop_possible)
+			
 			tf.summary.histogram("dw1", dWeights)
 			tf.summary.histogram("db1", dbiases)
 
-			dWeights2 = tf.get_variable(name='dis_w2', shape=[dis_dim, dis_dim], 
+			dWeights2 = tf.get_variable(name='dw2', shape=[dis_dim, dis_dim, 5], 
 							initializer=tf.random_uniform_initializer(-0.1, 0.1))
-			dbiases2 = tf.get_variable(name='dis_b2', shape = [dis_dim], 
+			dbiases2 = tf.get_variable(name='db2', shape = [dis_dim, 5], 
 							initializer=tf.constant_initializer(0.))
-
-			D_output2 = tf.matmul(D_output, dWeights2) + dbiases2
-			D_output2 = tf.nn.tanh(D_output2)
+			D_output2 = tf.tensordot(D_output, dWeights2, axes=1) + dbiases2
+			D_output2 = tf.reduce_max(D_output2, axis=2)
 			D_output2 = tf.nn.dropout(D_output2, self.drop_possible)
+
 			tf.summary.histogram("dw2", dWeights2)
 			tf.summary.histogram("db2", dbiases2)
 
-			dWeights3 = tf.get_variable(name='dis_w3', shape=[dis_dim, 1], 
+			dWeights3 = tf.get_variable(name='dw3', shape=[dis_dim, 1], 
 							initializer=tf.random_uniform_initializer(-0.1, 0.1))
-			dbiases3 = tf.get_variable(name='dis_b3', shape = [1], 
+			dbiases3 = tf.get_variable(name='db3', shape = [1], 
 							initializer=tf.constant_initializer(0.))
-
 			D_output3 = tf.matmul(D_output2, dWeights3) + dbiases3
 			D_output3_ = tf.nn.sigmoid(D_output3)
+
 			tf.summary.histogram("dw3", dWeights3)
 			tf.summary.histogram("db3", dbiases3)
-
 			# 返回的后者是sigmoid的结果
-			return D_output3, D_output3_			
-
-
-			# dWeights = tf.get_variable(name='dw1', shape=[input_dim, dis_dim, 5], 
-			# 				initializer=tf.random_uniform_initializer(-0.1, 0.1))
-			# dbiases = tf.get_variable(name='db1', shape = [dis_dim, 5], 
-			# 				initializer=tf.constant_initializer(0.))
-
-			# D_output = tf.tensordot(input_data, dWeights, axes=1) + dbiases
-			# D_output = tf.reduce_max(D_output, axis=2)
-			# D_output = tf.nn.tanh(D_output)
-			# D_output = tf.nn.dropout(D_output, self.drop_possible)
-			# tf.summary.histogram("dw1", dWeights)
-			# tf.summary.histogram("db1", dbiases)
-
-			# dWeights2 = tf.get_variable(name='dw2', shape=[dis_dim, dis_dim, 5], 
-			# 				initializer=tf.random_uniform_initializer(-0.1, 0.1))
-			# dbiases2 = tf.get_variable(name='db2', shape = [dis_dim, 5], 
-			# 				initializer=tf.constant_initializer(0.))
-
-			# D_output2 = tf.tensordot(D_output, dWeights2, axes=1) + dbiases2
-			# D_output2 = tf.reduce_max(D_output2, axis=2)
-			# D_output2 = tf.nn.tanh(D_output2)
-			# D_output2 = tf.nn.dropout(D_output2, self.drop_possible)
-
-			# tf.summary.histogram("dw2", dWeights2)
-			# tf.summary.histogram("db2", dbiases2)
-
-			# dWeights3 = tf.get_variable(name='dw3', shape=[dis_dim, 1], 
-			# 				initializer=tf.random_uniform_initializer(-0.1, 0.1))
-			# dbiases3 = tf.get_variable(name='db3', shape = [1], 
-			# 				initializer=tf.constant_initializer(0.))
-
-			# D_output3 = tf.matmul(D_output2, dWeights3) + dbiases3
-			# D_output3_ = tf.nn.sigmoid(D_output3)
-
-			# tf.summary.histogram("dw3", dWeights3)
-			# tf.summary.histogram("db3", dbiases3)
-
+			return D_output3, D_output3_
 			
 
 	def train(self, config):
