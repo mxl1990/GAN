@@ -52,8 +52,8 @@ class GAN(object):
 			Weights = tf.Variable(tf.random_uniform([input_dim, gen_dim], -0.1, 0.1), name='gen_dw1')
 			biases = tf.Variable(tf.zeros([gen_dim]), name='db1')
 			G_output = tf.matmul(noise, Weights) + biases
-			# G_output = tf.nn.relu(G_output)
-			G_output = tf.nn.tanh(G_output)
+			G_output = tf.nn.relu(G_output)
+			# G_output = tf.nn.tanh(G_output)
 
 			tf.summary.histogram("dw1_gen", Weights)
 			tf.summary.histogram("db1_gen", biases)
@@ -61,8 +61,8 @@ class GAN(object):
 			Weights2 = tf.Variable(tf.random_uniform([gen_dim, gen_dim], -0.1, 0.1), name='gen_dw2')
 			biases2 = tf.Variable(tf.zeros([gen_dim]), name='db2')
 			G_output2 = tf.matmul(G_output, Weights2) + biases2
-			# G_output2 = tf.nn.relu(G_output2)
-			G_output2 = tf.nn.tanh(G_output2)
+			G_output2 = tf.nn.relu(G_output2)
+			# G_output2 = tf.nn.tanh(G_output2)
 
 			tf.summary.histogram("dw2_gen", Weights2)
 			tf.summary.histogram("db2_gen", biases2)
