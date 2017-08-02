@@ -7,10 +7,10 @@ from tensorflow.python import debug as tfdbg
 run_config = tf.ConfigProto()
 run_config.gpu_options.allow_growth=True
 
-# with tf.Session(config=run_config) as sess:
 with tf.Session(config=run_config) as sess:
 	# sess = tfdbg.LocalCLIDebugWrapperSession(sess)
-	# sess.add_tensor_filter("has_inf_or_nan", tfdbg.has_inf_or_nan)
+	# sess.add_tensor_filter("has_inf_or_nan",tfdbg.has_inf_or_nan)
+
 	gan = GAN(
 			sess,
 			input_dim = 28*28,
@@ -21,7 +21,7 @@ with tf.Session(config=run_config) as sess:
 	config = empty()
 	config.epoch = 10000
 	config.batch_size = 100
-	config.learn_rate = 0.001
-	config.data_dir = "./MNIST"
+	config.learn_rate = 0.01
+	config.data_dir = "./mnist_train"
 
 	gan.train(config)
