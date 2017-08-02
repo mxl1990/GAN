@@ -91,7 +91,7 @@ class GAN(object):
 			D_output = tf.tensordot(input_data, dWeights, axes=1) + dbiases
 			D_output = tf.reduce_max(D_output, axis=2)
 			D_output = tf.nn.dropout(D_output, self.drop_possible)
-			
+
 			tf.summary.histogram("dw1", dWeights)
 			tf.summary.histogram("db1", dbiases)
 
@@ -142,9 +142,9 @@ class GAN(object):
 		tf.global_variables_initializer().run()
 		sum_var = tf.summary.merge_all()
 
-		# from tensorflow.examples.tutorials.mnist import input_data
-		# data = input_data.read_data_sets(config.data_dir) # 载入训练数据
-		# data = data.train # 仅保留训练数据
+		from tensorflow.examples.tutorials.mnist import input_data
+		data = input_data.read_data_sets(config.data_dir, validation_size=0) # 载入训练数据，不需要验证数据
+		data = data.train # 仅保留训练数据
 
 		writer = tf.summary.FileWriter(".//test", self.sess.graph)
 		writer.add_graph(self.sess.graph)
@@ -152,23 +152,24 @@ class GAN(object):
 		learn_rate = config.learn_rate
 		sess = self.sess
 
-		from glob import glob
-		import os
-		data = glob(os.path.join(config.data_dir, "*.jpg"))
-		images = []
-		from PIL import Image
-		for datum in data:
-			image = np.array(Image.open(datum), 'f')
-			image = np.resize(image, (self.input_dim))
-			images.append(image)
+		# from glob import glob
+		# import os
+		# data = glob(os.path.join(config.data_dir, "*.jpg"))
+		# images = []
+		# from PIL import Image
+		# for datum in data:
+		# 	image = np.array(Image.open(datum), 'f')
+		# 	image = np.resize(image, (self.input_dim))
+		# 	images.append(image)
 
 		
-		images = np.array(images)
-		pic_num = len(images)
-		print("get %d images"%pic_num)
-		images = normalize_image(images)
-		# batch_num = pic_num // batch_size
+		# images = np.array(images)
+		# pic_num = len(images)
+		# print("get %d images"%pic_num)
+		# images = normalize_image(images)
+		# # batch_num = pic_num // batch_size
 		batch_num = 1
+		# batch_num = data.num_examples // batch_size
 
 		import os
 		if not os.path.exists("./checkpoint"): # 创建checkpoint存放文件夹
@@ -182,10 +183,8 @@ class GAN(object):
 			g_loss_sum = 0.0
 
 			for batch in range(batch_num):
-				# batch_data = normalize_image(data.next_batch(batch_size)[0])
-				
-				batch_data = images[batch: batch + batch_size]
-				# batch_data = images[0:batch_size]
+				batch_data = data.next_batch(batch_size)[0]
+				# batch_data = images[batch: batch + batch_size]
 				
 				# 训练D
 				noise = random_data(batch_size, self.input_dim)
@@ -216,16 +215,12 @@ class GAN(object):
 			
 			if step % 100 == 0:
 				print("[%4d] GAN-d-loss: %.12f  GAN-g-loss: %.12f" % (step, d_loss_sum / batch_num, g_loss_sum / batch_num))
-				# idx = random.randint(0,batch_size)
 				generate = np.resize(generate[0],(28,28))
 				imsave("train%d_%d.jpg"%(step,0), generate)
 
 			if step % 5000 == 0:
 				saver.save(self.sess, os.path.join("./checkpoint", 'gan.ckpt'))
 				print("check point saving...")
-
-			# if step % 10000 == 0:
-			# 	learn_rate = learn_rate / 10
 
 		noise = random_data(batch_size, self.input_dim)
 		generate = sess.run(self.fake_data, feed_dict={
