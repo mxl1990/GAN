@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-class empty():
-	pass
-
 	
 def sample_data(size, length=100):
 	"""
@@ -71,34 +68,37 @@ def normalize_image(images):
 def denormal_image(images):
 	return images * 255.0
 
-# def save_images(images, size, image_path):
-#   return imsave(images, size, image_path)
+def save_images(data, size, mergesize, image_path):
+	images = []
+	for i in range(len(data)):
+		images.append(np.resize(data[i], mergesize))
+	return imsave(np.array(images), size, image_path)
 
 
-# def imsave(images, size, path):
-#   image = np.squeeze(merge(images, size))
-#   from scipy.misc import imsave
-#   return imsave(path, image)
+def imsave(images, size, path):
+	image = np.squeeze(merge(images, size))
+	from scipy.misc import imsave
+	return imsave(path, image)
 
 
-# def merge(images, size): # images是图片列表，size是图片个数
-#   h, w = images.shape[1], images.shape[2]
-#   if (images.shape[3] in (3,4)):
-#     c = images.shape[3]
-#     img = np.zeros((h * size[0], w * size[1], c))
-#     for idx, image in enumerate(images):
-#       i = idx % size[1]
-#       j = idx // size[1]
-#       img[j * h:j * h + h, i * w:i * w + w, :] = image
-#     return img
-#   elif images.shape[3]==1:
-#     img = np.zeros((h * size[0], w * size[1]))
-#     for idx, image in enumerate(images):
-#       i = idx % size[1]
-#       j = idx // size[1]
-#       img[j * h:j * h + h, i * w:i * w + w] = image[:,:,0]
-#     return img
-#   else:
-#     raise ValueError('in merge(images,size) images parameter '
-#                      'must have dimensions: H x W or H x W x 3 or H x W x 4')
+def merge(images, size): # images是图片列表，size是图片个数
+	h, w = images.shape[1], images.shape[2]
+	if (images.shape[3] in (3,4)):
+		c = images.shape[3]
+		img = np.zeros((h * size[0], w * size[1], c))
+		for idx, image in enumerate(images):
+			i = idx % size[1]
+			j = idx // size[1]
+			img[j * h:j * h + h, i * w:i * w + w, :] = image
+		return img
+	elif images.shape[3]==1:
+		img = np.zeros((h * size[0], w * size[1]))
+		for idx, image in enumerate(images):
+			i = idx % size[1]
+			j = idx // size[1]
+			img[j * h:j * h + h, i * w:i * w + w] = image[:,:,0]
+		return img
+	else:
+		raise ValueError('in merge(images,size) images parameter '
+						 'must have dimensions: H x W or H x W x 3 or H x W x 4')
 
