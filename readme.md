@@ -11,6 +11,23 @@ TensorFlow implementation of Generative Adversarial Nets which can generate some
 
 ## Usage
 If you want to run simple sample learn to draw normal distrubition, just run with:    
-`$ python main.py`  
+`python main.py`  
 If you want to run GAN on MNIST data set, just run with:  
-`$ python main_mnist.py`
+`python main_mnist.py`
+and program will find MNIST data in ./data/MNIST as default. If you want to change some default settings, you can pass those to the command line, such as
+```
+python main_mnist.py --epoch 10001 --batch_size 100 --learing_rate 0.01 --datadir "./data/MNIST"
+```
+Here is the list of arguments:
+```
+usage: main_mnist.py [--epoch epochnum] [--batch_size batch_size] [--learning_rate learning_rate] [--datadir dir_of_data]
+optional arguments:
+--epoch 
+	the number of training epoch, default number is 10001
+--batch_size
+	the number of data set each batch, default number is 100
+--learning_rate
+	the learning rate of Momentum Optimizer, default number is 0.01
+--datadir
+	the dictionary of mnist data put in, if there isn't mnist data in this dictionary, it will download in this dirctionary
+```
